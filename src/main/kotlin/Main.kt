@@ -1,4 +1,7 @@
+import be.senne.util.*
 import org.bouncycastle.jce.provider.BouncyCastleProvider
+import java.lang.Exception
+import java.lang.StringBuilder
 import java.security.SecureRandom
 import java.security.Security
 import javax.crypto.Cipher
@@ -22,31 +25,39 @@ fun main(args: Array<String>) {
     //registreer bouncy castle als security provider
     Security.addProvider(BouncyCastleProvider())
 
-    val aesKey : SecretKey = SecretKeySpec("00112233445566778899AABBCCDDEEFF".hexStringToByteArray(), "AES")
+    val aesKey = "CF 86 86 D5 2D 7B FA D1 83 64 6F 75 F6 DA 0B 45".hexStringToByteArray()
+    val aesIv  = "4B 53 A9 92 F5 F7 34 7E 0E 2D 45 D9 04 25 C1 C4".hexStringToByteArray()
+    val data   = "48 61 6C 6C 6F 20 3A 29 00 00 00 00 00 00 00 00".hexStringToByteArray()
 
-    val encryptor = Cipher.getInstance("AES/ECB/NoPadding", "BC");
-    encryptor.init(ENCRYPT_MODE, aesKey)
+    val encryptedEcb = ecbEncrypt(data, aesKey)
+    val decryptedEcb = ecbDecrypt(encryptedEcb, aesKey)
 
-    val decryptor = Cipher.getInstance("AES/ECB/NoPadding", "BC");
-    decryptor.init(DECRYPT_MODE, aesKey)
+    val encryptedCbc = cbcEncrypt(data, aesKey, aesIv)
+    val decryptedCbc = cbcDecrypt(encryptedCbc, aesKey, aesIv)
 
-    val plaintext = "AABBCCDDAABBCCDDAABBCCDDAABBCCDD".hexStringToByteArray()
+    println("Aes Tests:")
+    println("   ECB ENC: ${bytesToString(encryptedEcb)}")
+    println("   ECB DEC: ${bytesToString(decryptedEcb)}")
 
-    val encrypted_bytes = encryptor.doFinal(plaintext)
-    val decrypted_bytes = decryptor.doFinal(encrypted_bytes)
+    println("   CBC ENC: ${bytesToString(encryptedCbc)}")
+    println("   CBC DEC: ${bytesToString(decryptedCbc)}")
 
-    println(encrypted_bytes.joinToString { byte -> "%02X".format(byte) })
-    println(decrypted_bytes.joinToString { byte -> "%02X".format(byte) })
+
+    DiffieHellman()
+
 }
 
-fun String.hexStringToByteArray() : ByteArray? {
-    val hexString = this
+fun bytesToString(bytes : ByteArray) : String {
+    return bytes.joinToString { byte -> byte.toUByte().toString(16) }
+}
+
+fun String.hexStringToByteArray() : ByteArray {
+    val hexString = this.filter { character -> !character.isWhitespace() }
 
     if((hexString.length % 2) != 0) {
-        return null
+        throw Exception()
     }
 
     //eerst naar int ipv byte omdat er geen unsigned is en zelfs hun parsers begrijpen niet wat een byte 0x80 >= is.
     return hexString.chunked(2).map {str -> str.toInt(16).toByte() }.toByteArray()
-
 }
